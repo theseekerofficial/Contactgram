@@ -1,0 +1,10 @@
+python-telegram-bot
+python-dotenv
+pymongo
+motor
+tgcrypto
+aiohttp
+loguru
+pytz
+aiofiles
+requests
