@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://github.com/theseekerofficial">
     <kbd>
-      <img width="200" src="https://i.ibb.co/35LvkK8F/bot-pic.jpg" alt="MLWA Connect Icon" style="border: 4px solid #4CAF50; border-radius: 20px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <img width="200" src="https://i.postimg.cc/7L8tSRhY/image-2025-02-01-154557855.png" alt="MLWA Connect Icon" style="border: 4px solid #4CAF50; border-radius: 20px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
     </kbd>
   </a>
 </p>
