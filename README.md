@@ -23,7 +23,7 @@ A powerful, feature-packed Telegram bot built using Python with asynchronous pro
 - Instant message transfer system: Sends messages to admins or users with minimal delay.
 - **Reply Mode**: Toggle between sending normal messages and replying directly to user messages.
 - **Forward Mode**: Allows admins to forward messages directly to users when they forward a message to the bot.
-
+- **HTML Formatting**: Admins can use telegram supported HTML tags like, ```<b>, <i>, <u>, <a>, <code>, <per>``` for messages
 
 ## 📝 **Commands**:
 
