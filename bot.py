@@ -1,13 +1,16 @@
 # bot.py
 # Developed by The Seeker [https://t.me/The_Seeker_Contact_Robot]
-
+import asyncio
+import multiprocessing
 from loguru import logger
 from logger_config import configure_logger
 from utils.processor.tools import set_bot_info
 from utils.processor.load_env import env_dict, check_env
-from utils.commands.command_handlers import start, toggle_reply, handle_forward_mode, help_load
+from utils.quart.start_web_server import start_quart_web_app
+from utils.processor.context_processors import load_admin_names
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from utils.messages.message_handlers import forward_to_admin, handle_admin_reply, handle_admin_forwards
+from utils.commands.command_handlers import start, toggle_reply, handle_forward_mode, help_load, open_web_app
 from utils.callbacks.callback_handlers import handle_mark_as_seen, handle_already_seen, handle_help_navigation
 
 
@@ -29,18 +32,34 @@ bot_commands = [
     {
         "command": "forwardmode",
         "description": "Toggle forward messages to specific user or not (Only Admin) 🛡️"
+    },
+    {
+        "command": "openwebapp",
+        "description": "Access chat web interface 🕸️"
     }
 ]
 
+def run_quart():
+    try:
+        asyncio.run(start_quart_web_app())
+    except KeyboardInterrupt:
+        logger.info("Web Server shutting down....")
+
 
 def main():
-    logger.info("Starting Contactgram Bot...")
+    logger.info("🔄 Starting Quart Web Server...")
+    quart_process = multiprocessing.Process(target=run_quart, daemon=True)
+    quart_process.start()
+    logger.info("✅ Quart Web Server Thread Started")
+
+    logger.info("🚀 Starting Contactgram Bot...")
     application = Application.builder().token(bot_token).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler('help', help_load))
     application.add_handler(CommandHandler('togglereply', toggle_reply))
     application.add_handler(CommandHandler('forwardmode', handle_forward_mode))
+    application.add_handler(CommandHandler('openWebApp', open_web_app))
 
     application.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, forward_to_admin), group=1)
     application.add_handler(MessageHandler(filters.REPLY & ~filters.COMMAND, handle_admin_reply), group=2)
@@ -49,6 +68,8 @@ def main():
     application.add_handler(CallbackQueryHandler(handle_mark_as_seen, pattern=r"^seen_.*$"))
     application.add_handler(CallbackQueryHandler(handle_already_seen, pattern=r"^already_seen$"))
     application.add_handler(CallbackQueryHandler(handle_help_navigation, pattern=r"^help_(next|previous)_\d+$"))
+
+    application.job_queue.run_once(load_admin_names, when=5)
 
     if env_dict.get("AUTO_CONFIG").capitalize() == "True":
         if env_dict.get("SET_BOT_CMD", "True").capitalize() == "True":

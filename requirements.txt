@@ -1,10 +1,12 @@
-python-telegram-bot
+python-telegram-bot[job-queue]
 python-dotenv
 pymongo
-motor
 tgcrypto
 aiohttp
 loguru
 pytz
 aiofiles
 requests
+quart
+hypercorn
+cachetools

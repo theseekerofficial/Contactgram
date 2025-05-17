@@ -1,9 +1,10 @@
+import asyncio
 from loguru import logger
 from telegram.ext import CallbackContext
-
-from utils.commands.command_handlers import send_help_page
 from utils.database.db_initialize import db
 from utils.processor.load_env import env_dict
+from utils.processor.tools import store_chat_message
+from utils.commands.command_handlers import send_help_page
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 
 admin_chat_ids = env_dict.get("ADMIN_TEAM")
@@ -15,6 +16,13 @@ async def handle_mark_as_seen(update: Update, context: CallbackContext):
         callback_data = query.data
 
         _, user_id, message_id = callback_data.split("_")
+
+        if env_dict.get("ENABLE_BUTTON_CLICK_LOGS") and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, user_id,
+                                                   update.callback_query.message.message_id,
+                                                   f'User msg marked as seen by {query.from_user.full_name} admin.',
+                                                   'btn', is_admin=False, admin_id=None,
+                                                   is_media=False))
 
         if len(admin_chat_ids) > 1:
             previous_data_doc = await db.Seen_Messages.find_one({"user_id": int(user_id)})
@@ -57,6 +65,13 @@ async def handle_already_seen(update: Update, context: CallbackContext):
     try:
         query = update.callback_query
         await query.answer(text="This message has already been marked as seen.", show_alert=True)
+
+        if env_dict.get("ENABLE_BUTTON_CLICK_LOGS") and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.callback_query.from_user.id,
+                                                   update.callback_query.message.message_id,
+                                                   f'Message already marked as seen previously.',
+                                                   'btn', is_admin=False, admin_id=None,
+                                                   is_media=False))
     except Exception as e:
         logger.error(f"Error handling 'already_seen' callback: {str(e)}")
 
@@ -71,6 +86,6 @@ async def handle_help_navigation(update, context):
         page_number = int(callback_data.split("_")[2])
 
     if page_number is not None:
-        await send_help_page(update, page_number)
+        await send_help_page(update, context, page_number)
 
     await query.answer()

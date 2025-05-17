@@ -19,11 +19,19 @@ env_dict = {
     "ENABLE_DETAILED_FORWARD": os.getenv("ENABLE_DETAILED_FORWARD") if os.getenv("ENABLE_DETAILED_FORWARD") else "True",
     "WELCOME_MESSAGE": os.getenv("WELCOME_MESSAGE", "Reply to this bot to contact the owner!"),
     "WELCOME_IMAGE_URL": os.getenv("WELCOME_IMAGE_URL") if os.getenv("WELCOME_IMAGE_URL") else "No Image",
+    "START_WEB_APP": True if os.getenv("START_WEB_APP").capitalize() == 'True' else False,
+    "WEB_APP_PORT": int(os.getenv("WEB_APP_PORT")) if os.getenv("WEB_APP_PORT").isdigit() and os.getenv("START_WEB_APP").capitalize() == 'True' else 8080,
+    "ENABLE_CMD_LOGS": True if os.getenv("ENABLE_CMD_LOGS").capitalize() == 'True' else False,
+    "ENABLE_BUTTON_CLICK_LOGS": True if os.getenv("ENABLE_BUTTON_CLICK_LOGS").capitalize() == 'True' else False,
+    "WEB_APP_URL": os.getenv("WEB_APP_URL") if os.getenv("WEB_APP_URL") else None,
+    "INTERFACE_PROCESS_PASSWORD": os.getenv("INTERFACE_PROCESS_PASSWORD") if os.getenv("INTERFACE_PROCESS_PASSWORD") and os.getenv("START_WEB_APP").capitalize() == 'True' else None,
 }
 
 def check_env():
     for key, value in env_dict.items():
         value = value.strip() if isinstance(value, str) else value
+        if key in ("START_WEB_APP", "ENABLE_CMD_LOGS", "ENABLE_BUTTON_CLICK_LOGS", "WEB_APP_URL", "INTERFACE_PROCESS_PASSWORD"):
+            continue
         if value in (None, ''):
             logger.error(f"Missing value for {key} in settings.env file")
             sys.exit(1)

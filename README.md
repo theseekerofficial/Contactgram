@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://github.com/theseekerofficial">
     <kbd>
-      <img width="200" src="https://i.postimg.cc/7L8tSRhY/image-2025-02-01-154557855.png" alt="MLWA Connect Icon" style="border: 4px solid #4CAF50; border-radius: 20px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+      <img width="200" src="https://i.ibb.co/35LvkK8F/bot-pic.jpg" alt="MLWA Connect Icon" style="border: 4px solid #4CAF50; border-radius: 20px; padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
     </kbd>
   </a>
 </p>
@@ -23,7 +23,7 @@ A powerful, feature-packed Telegram bot built using Python with asynchronous pro
 - Instant message transfer system: Sends messages to admins or users with minimal delay.
 - **Reply Mode**: Toggle between sending normal messages and replying directly to user messages.
 - **Forward Mode**: Allows admins to forward messages directly to users when they forward a message to the bot.
-- **HTML Formatting**: Admins can use telegram supported HTML tags like, ```<b>, <i>, <u>, <a>, <code>, <per>``` for messages
+
 
 ## 📝 **Commands**:
 
@@ -40,26 +40,83 @@ Below is the list of available commands for the Contactgram bot:
 
 This is where all the core configuration for the bot is stored. Below is the list of available settings:
 
-| **Setting**               | **Description**                                                                     |
-|---------------------------|-------------------------------------------------------------------------------------|
-| `BOT_TOKEN`               | Bot token from BotFather                                                            |
-| `ADMIN_TEAM`              | List of Telegram user IDs for admins, separated by commas                           |
-| `MONGO_URI`               | URI for MongoDB connection                                                          |
-| `TIMEZONE`                | Admin's timezone (use `Asia/Colombo` format)                                        |
-| `AUTO_CONFIG`             | Set to 'True' for auto configuration during bot deployment                          |
-| `BOT_NAME`                | Name of the bot used for auto configuration                                         |
-| `BOT_DESCRIPTION`         | Description for the bot for auto configuration                                      |
-| `BOT_SHORT_DESCRIPTION`   | Short description for the bot during auto configuration                             |
-| `SET_BOT_CMD`             | Set to `True` if you want to auto set bot commands during configuration             |
-| `ENABLE_DETAILED_FORWARD` | Set to `True` to enable forwarding messages to admins instead of simple forwarding. |
-| `WELCOME_MESSAGE`         | Message that users will see when they start the bot with `/start`                   |
-| `WELCOME_IMAGE_URL`       | Optional image URL that will be sent along with the welcome message                 |
+| **Setting**                 | **Description**                                                                                                                                     |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `BOT_TOKEN`                 | Bot token from BotFather                                                                                                                            |
+| `ADMIN_TEAM`                | List of Telegram user IDs for admins, separated by commas                                                                                           |
+| `MONGO_URI`                 | URI for MongoDB connection                                                                                                                          |
+| `TIMEZONE`                  | Admin's timezone (use `Asia/Colombo` format)                                                                                                        |
+| `AUTO_CONFIG`               | Set to 'True' for auto configuration during bot deployment                                                                                          |
+| `BOT_NAME`                  | Name of the bot used for auto configuration                                                                                                         |
+| `BOT_DESCRIPTION`           | Description for the bot for auto configuration                                                                                                      |
+| `BOT_SHORT_DESCRIPTION`     | Short description for the bot during auto configuration                                                                                             |
+| `SET_BOT_CMD`               | Set to `True` if you want to auto set bot commands during configuration                                                                             |
+| `ENABLE_DETAILED_FORWARD`   | Set to `True` to enable forwarding messages to admins instead of simple forwarding.                                                                 |
+| `WELCOME_MESSAGE`           | Message that users will see when they start the bot with `/start`                                                                                   |
+| `WELCOME_IMAGE_URL`         | Optional image URL that will be sent along with the welcome message                                                                                 |
+| `START_WEB_APP`             | Start the web interface. If this not set to `True` you cannot use /openwebapp cmd                                                                   |
+| `QUART_SECRET_KEY`          | This is like your web app password. Any String allowed. More randomness = More Secure. Do not use `$` symbol                                        |
+| `WEB_APP_PORT`              | Port number of web interface. (Recommended to not to change)                                                                                        |
+| `SAVE_MESSAGES`             | Save messages to mongodb to see in web interface. Set to `True`                                                                                     |
+| `INTERFACE_ACCESS_PASSWORD` | Admin password to access web app. Any String. More randomness = More Secure. Do not use `$` symbol                                                  |
+| `ENABLE_CMD_LOGS`           | If set to `True` all bot cmd usage (Both admin and user) will be saved to mongodb  can be see in web interface.                                     |
+| `ENABLE_BUTTON_CLICK_LOGS`  | If set to `True` all user and admin inline button clicks will be saved to mongodb and can be see in web interface.                                  |
+| `WEB_APP_URL`               | Your domain or server ip. If using a domain see [Nginx Configuration](#Nginx). Example Values: (`https://contactgram.com` or `http://52.168.45.24`) |
 
 ---
 
-## 🚀 **Deployment Instructions**:
+## Nginx Configuration
 
-Deploy Contactgram bot by following these simple steps:
+To use the web interface with a domain, you need to set up Nginx with the following configuration:
+
+### ✅ Step 1: Install Nginx
+
+### On Ubuntu/Debian:
+```bash
+sudo apt update 
+sudo apt install nginx -y
+```
+
+### ▶️ Step 2: Start and Enable Nginx
+```bash
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
+
+To check if Nginx is running:
+```bash
+sudo systemctl status nginx
+```
+
+### 🧾 Step 3: Add nginx template
+
+- Copy the `contactgram.ngnix` file in assets folder in this repo to `/etc/nginx/sites-available/` directory on your server.
+- Replace the `your-domain.com` with your domain (No https://, http://, or www. prefix. Just the domain name like contactgram.com)
+- Run the following command to create a symbolic link:
+```bash
+sudo ln -s /etc/nginx/sites-available/contactgram.ngnix /etc/nginx/sites-enabled/
+```
+
+### Step 4: Test and Restart Nginx
+- Test Nginx configuration using this cmd:
+```bash
+sudo nginx -t
+```
+- If you see output like 
+```text
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+```
+- You are good to go. Restart Nginx using this cmd:
+```bash
+sudo systemctl restart nginx
+```
+
+- Good Job! You can now access the web interface at your-domain.com
+---
+
+
+## 🚀 **Deployment Instructions**:
 
 1. **Give a Star**:  
    Don't forget to show your support by giving a ⭐ to the repository:  
@@ -97,7 +154,7 @@ Deploy Contactgram bot by following these simple steps:
 
 ## 🚦 **Version:**
 
-- Contactgram Version: 1.0.0
+- Contactgram Version: 1.5.0
 
 ---
 

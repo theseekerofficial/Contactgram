@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chat.styles.css') }}?v=1.1.8-UKF">
+    <title>Contactgram Chats</title>
+</head>
+<body>
+    <div class="container">
+        <div class="contact-list">
+            <div class="contact-header">
+                <h1>Contactgram Chats</h1>
+            </div>
+
+            {% for user_id, contact in user_contact_data.items() %}
+            <div class="contact-item" data-user-id="{{ user_id }}">
+                <div class="avatar">{{ contact["user_name"][0] }}</div>
+                <div>
+                    <h3>{{ contact["user_name"] }}</h3>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="chat-box">
+            <div class="empty-message-placeholder">
+                <p>Click a contact to see messages!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null;
+        let loadedContacts = {};
+        let messageCounts = {};
+        let isInitialLoad = true;
+        let hasMoreMessages = {};
+
+        document.querySelectorAll('.contact-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const placeholder = document.querySelector('.empty-message-placeholder');
+                placeholder.classList.add('hide');
+                placeholder.style.display = 'none';
+
+                document.querySelectorAll('.contact-item').forEach(c => c.classList.remove('active'));
+                item.classList.add('active');
+
+                let userId = item.getAttribute('data-user-id');
+
+                if (userId !== currentUserId) {
+                    currentUserId = userId;
+
+                    document.querySelectorAll('.message-container').forEach(container => {
+                        container.style.display = 'none';
+                    });
+
+                    if (!loadedContacts[userId]) {
+                        createMessageContainer(userId);
+                        loadMessages(userId, 0);
+                        loadedContacts[userId] = true;
+                        messageCounts[userId] = 0;
+                    } else {
+                        document.getElementById('messages-' + userId).style.display = 'block';
+                    }
+                }
+
+                if (currentMessageContainer) {
+                    currentMessageContainer.removeEventListener('scroll', scrollHandler);
+                }
+
+                currentMessageContainer = document.getElementById(`messages-${userId}`);
+
+                currentMessageContainer.addEventListener('scroll', scrollHandler);
+            });
+        });
+
+        async function scrollHandler() {
+            if (this.scrollTop === 0 && currentUserId && hasMoreMessages[currentUserId]) {
+                await loadMessages(currentUserId, messageCounts[currentUserId]);
+
+                const oldHeight = this.scrollHeight;
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                this.scrollTop = this.scrollHeight - oldHeight;
+            }
+        }
+
+        function createMessageContainer(userId) {
+            const newContainer = document.createElement('div');
+            newContainer.classList.add('message-container');
+            newContainer.id = 'messages-' + userId;
+
+            const chatBox = document.querySelector('.chat-box');
+            chatBox.appendChild(newContainer);
+        }
+
+        const messageContainer = document.querySelector('.message-container');
+        let userId = null;
+        let currentMessageContainer = null;
+
+        async function loadMessages(userId, skip) {
+            try {
+                const response = await fetch(`/fetch-messages/${userId}?skip=${skip}`);
+                const messages = await response.json();
+                const messageContainer = document.getElementById(`messages-${userId}`);
+
+                if (messages.length === 0) {
+                    hasMoreMessages[userId] = false;
+                    return;
+                } else {
+                    hasMoreMessages[userId] = true;
+                }
+
+                const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (messages.length) {
+                    messageCounts[userId] = (messageCounts[userId] || 0) + messages.length;
+                    messages.forEach(msg => {
+                        const date = new Date(msg.timestamp);
+                        const localTime = date.toLocaleTimeString('en-US', {
+                            timeZone: userTimezone,
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        let labels = [];
+                        if (msg.is_forwarded) {
+                            labels.push('<div class="message-label">Forwarded Message</div><br>');
+                        }
+                        if (msg.is_media) {
+                            labels.push('<div class="message-label">Media Message</div><br>');
+                        }
+
+                        if (msg.is_reply && msg.reply_msg_id) {
+                            labels.push(`<a href="#" class="reply-link" data-user-id="${userId}" data-msg-id="${msg.reply_msg_id}" onclick="fetchOriginalMessage('${userId}', '${msg.reply_msg_id}'); return false;">↩ View Replied message</a><br>`);
+                        }
+
+                        let content = msg.message;
+                        if (msg.msg_type === 'cmd') {
+                            content = `<a href="#" class="command-link">${msg.message}</a>`;
+                        } else if (msg.msg_type === 'btn') {
+                            content = `
+                                <div class="btn-label">BTN Click</div>
+                                ${msg.message}
+                            `;
+                        }
+
+                        const messageElement = `
+                            <div class="message ${msg.is_sent ? 'sent' : 'received'} ${msg.is_sent && msg.replied_admin_name && msg.replied_admin_id ? 'has-admin-info' : ''}">
+                                <div class="message-content">
+                                    ${labels.join('')}
+                                    ${content}
+                                    ${msg.is_sent && msg.replied_admin_name && msg.replied_admin_id ? `
+                                        <div class="admin-info">
+                                            <div class="admin-details">
+                                                Replied by: ${msg.replied_admin_name} (${msg.replied_admin_id})
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    <span class="message-time">${localTime}</span>
+                                    ${msg.is_sent && msg.replied_admin_name && msg.replied_admin_id ? `
+                                        <div class="dropdown-icon">▼</div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                        messageContainer.insertAdjacentHTML('afterbegin', messageElement);
+                    });
+
+                    if (isInitialLoad) {
+                        messageContainer.scrollTop = messageContainer.scrollHeight;
+                        isInitialLoad = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        async function fetchOriginalMessage(userId, messageId) {
+            try {
+                const response = await fetch(`/fetch_message/${userId}/${messageId}`);
+                if (response.status === 404) {
+                    iziToast.error({
+                        title: 'Not found!',
+                        message: 'The Original Replied Message Not Found In Database',
+                        position: 'topRight',
+                        layout: 2
+                    });
+                    return;
+                }
+                const originalMessage = await response.json();
+                showMessagePopup(originalMessage);
+            } catch (error) {
+                console.error('Error fetching message:', error);
+            }
+        }
+
+        function showMessagePopup(message) {
+            const popup = document.createElement('div');
+            popup.className = 'glass-popup';
+
+            const popupContent = `
+                <div class="popup-content">
+                    <button class="popup-close">&times;</button>
+                    <h3>Original Message</h3>
+                    <div class="popup-message-content">
+                        ${message.message}
+                    </div>
+                    <div class="popup-meta">
+                        <p>Sent by: ${message.user_name}</p>
+                        <p>At: ${new Date(message.timestamp).toLocaleString()}</p>
+                        ${message.is_forwarded ? '<p>↪ Messages is a forwarded message</p>' : ''}
+                        ${message.is_media ? '<p>📷 Messages is a media message</p>' : ''}
+                    </div>
+                </div>
+            `;
+
+            popup.innerHTML = popupContent;
+            document.body.appendChild(popup);
+
+            popup.querySelector('.popup-close').addEventListener('click', () => {
+                document.body.removeChild(popup);
+            });
+
+            popup.addEventListener('click', (e) => {
+                if (e.target === popup) {
+                    document.body.removeChild(popup);
+                }
+            });
+        }
+
+        document.querySelectorAll('.contact-item').forEach(item => {
+            item.addEventListener('click', () => {
+                isInitialLoad = true;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,9 +1,13 @@
+import string
+import asyncio
+import secrets
 import telegram
 from loguru import logger
-from datetime import datetime, timezone
 from telegram.ext import CallbackContext
 from utils.processor.load_env import env_dict
-from utils.database.db_initialize import user_collection
+from datetime import datetime, timezone, timedelta
+from utils.processor.tools import store_chat_message
+from utils.database.db_initialize import user_collection, db
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 
 admin_chat_ids = env_dict.get("ADMIN_TEAM")
@@ -90,6 +94,10 @@ async def start(update: Update, context: CallbackContext):
         user_id = update.message.from_user.id
         existing_user = await user_collection.find_one({"telegram_id": int(user_id)})
 
+        if env_dict.get("ENABLE_CMD_LOGS") and str(user_id) not in admin_chat_ids and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.message.from_user.id, update.message.message_id, '/start',
+                                                   'cmd', is_admin=False, admin_id=None, is_media=False))
+
         if not existing_user and str(user_id) not in admin_chat_ids:
             user_data = {
                 "name": update.message.from_user.first_name,
@@ -134,12 +142,16 @@ async def start(update: Update, context: CallbackContext):
         logger.error(f"Error storing user data: {str(e)}")
 
 async def help_load(update, context):
-    await send_help_page(update, page_number=1, start_page=True)
+    await send_help_page(update, context, page_number=1, start_page=True)
 
 async def toggle_reply(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     if str(user_id) not in admin_chat_ids:
         await update.message.reply_text("Sorry champ. This command only for admins!", reply_to_message_id=update.message.message_id)
+
+        if env_dict.get("ENABLE_CMD_LOGS") and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.message.from_user.id, update.message.message_id, '/togglereply',
+                                                   'cmd', is_admin=False, admin_id=None, is_media=False))
         return
 
     if env_dict.get("ENABLE_DETAILED_FORWARD").capitalize() != "True":
@@ -167,6 +179,10 @@ async def handle_forward_mode(update: Update, context: CallbackContext):
     interact_user_id = update.message.from_user.id
     if str(interact_user_id) not in admin_chat_ids:
         await update.message.reply_text("Sorry champ. This command only for admins!", reply_to_message_id=update.message.message_id)
+
+        if env_dict.get("ENABLE_CMD_LOGS") and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.message.from_user.id, update.message.message_id, '/forwardmode',
+                                                   'cmd', is_admin=False, admin_id=None, is_media=False))
         return
 
     if context.user_data.get("forward_mode_target", None):
@@ -206,7 +222,7 @@ async def handle_forward_mode(update: Update, context: CallbackContext):
     await update.message.reply_text(f"Forward mode target set to <code>{user_name}</code>. Now forward anything to me and I ll deliver it to <code>{user_name}</code>.\n\nWhenever you want to stop forwarding, simply send /forwardmode again",
                                     reply_to_message_id=update.message.message_id, parse_mode="html")
 
-async def send_help_page(update, page_number, start_page=False):
+async def send_help_page(update, context, page_number, start_page=False):
     help_page = HELP_PAGES[page_number - 1]
     message = help_page["text"]
     buttons = help_page["buttons"]
@@ -218,6 +234,10 @@ async def send_help_page(update, page_number, start_page=False):
             parse_mode="html",
             reply_to_message_id=update.message.message_id
         )
+
+        if env_dict.get("ENABLE_CMD_LOGS") and str(update.message.from_user.id) not in admin_chat_ids and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.message.from_user.id, update.message.message_id, '/help',
+                                                   'cmd', is_admin=False, admin_id=None, is_media=False))
         return
 
     await update.callback_query.message.edit_text(
@@ -225,3 +245,67 @@ async def send_help_page(update, page_number, start_page=False):
         reply_markup=InlineKeyboardMarkup(buttons),
         parse_mode="html"
     )
+    if env_dict.get("ENABLE_BUTTON_CLICK_LOGS") and str(update.callback_query.from_user.id) not in admin_chat_ids and env_dict.get("START_WEB_APP"):
+        asyncio.create_task(store_chat_message(context, update.callback_query.from_user.id, update.callback_query.message.message_id, f'User Navigated to {page_number} help page',
+                                               'btn', is_admin=False, admin_id=None,
+                                               is_media=False))
+
+async def open_web_app(update, context):
+    if str(update.message.from_user.id) not in admin_chat_ids:
+        await update.message.reply_text("Sorry champ. This command only for admins!", reply_to_message_id=update.message.message_id)
+
+        if env_dict.get("ENABLE_CMD_LOGS") and env_dict.get("START_WEB_APP"):
+            asyncio.create_task(store_chat_message(context, update.message.from_user.id, update.message.message_id, '/openWebApp',
+                                                   'cmd', is_admin=False, admin_id=None, is_media=False))
+        return
+
+    if not env_dict.get("START_WEB_APP") and not env_dict.get("INTERFACE_PROCESS_PASSWORD"):
+        await update.message.reply_text("Web app interface is disabled. Please enable it in settings.env", reply_to_message_id=update.message.message_id)
+        return
+
+    if str(update.message.from_user.id) in admin_chat_ids:
+        collection = db.Config
+        def _generate_random_hash(length=65):
+            alphabet = string.ascii_letters + string.digits
+            random_hash_code = ''.join(secrets.choice(alphabet) for _ in range(length))
+            return random_hash_code
+
+        random_hash = _generate_random_hash()
+
+
+        config_doc = await collection.find_one({'user_id': str(update.message.from_user.id)})
+        if config_doc:
+            if config_doc.get('security_hash'):
+                previous_random_hash = config_doc.get('security_hash')
+                message = f"""Your security hash is: <code>{previous_random_hash}</code>
+
+<i>Your login url is:</i> <a href="{env_dict.get('WEB_APP_URL')}/?security_hash={previous_random_hash}&interface_access={env_dict.get('INTERFACE_PROCESS_PASSWORD')}">Contactgram Web Interface Access Link</a>
+
+<b>Warning ⚠️: Do not share this url with anyone, this url is unique to you [<code>{update.message.from_user.full_name}</code>] only!. Anyone with this url can access all your users messages</b>
+
+<b>This url will automatically invalid after 1h from now!</b>"""
+
+                await context.bot.send_message(text=message, chat_id=update.message.from_user.id, reply_to_message_id=update.message.message_id,
+                                               parse_mode="html")
+                logger.info(f"Admin ({update.message.from_user.full_name}) re-requested web interface access link")
+                return
+
+
+        document = {
+            "security_hash": random_hash,
+            "user_id": str(update.message.from_user.id),
+            "delete_at": datetime.now(tz=timezone.utc) + timedelta(hours=1)
+        }
+
+        await collection.insert_one(document)
+
+        message = f"""Your security hash is: <code>{random_hash}</code>
+
+<i>Your login url is:</i> <a href="{env_dict.get('WEB_APP_URL')}/?security_hash={random_hash}&interface_access={env_dict.get('INTERFACE_PROCESS_PASSWORD')}">Contact Web Interface Access Link</a>
+
+<b>Warning ⚠️: Do not share this url with anyone, this url is unique to you [<code>{update.message.from_user.full_name}</code>] only!. Anyone with this url can access all your users messages</b>
+
+<b>This url will automatically invalid after 1h from now!</b>"""
+
+        await context.bot.send_message(text=message, chat_id=update.message.from_user.id, reply_to_message_id=update.message.message_id, parse_mode="html")
+        logger.info(f"Admin ({update.message.from_user.full_name}) generated web interface access link")
