@@ -90,11 +90,11 @@ sudo systemctl status nginx
 
 ### 🧾 Step 3: Add nginx template
 
-- Copy the `contactgram.ngnix` file in assets folder in this repo to `/etc/nginx/sites-available/` directory on your server.
+- Copy the `contactgram.nginx` file in assets folder in this repo to `/etc/nginx/sites-available/` directory on your server.
 - Replace the `your-domain.com` with your domain (No https://, http://, or www. prefix. Just the domain name like contactgram.com)
 - Run the following command to create a symbolic link:
 ```bash
-sudo ln -s /etc/nginx/sites-available/contactgram.ngnix /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/contactgram.nginx /etc/nginx/sites-enabled/
 ```
 
 ### Step 4: Test and Restart Nginx
