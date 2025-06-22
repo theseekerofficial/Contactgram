@@ -1,7 +1,26 @@
+# Fallow "https nginx guide.md"
+
 server {
     listen 80;
-
     server_name your-domain.com;  # Replace with your domain or IP address (No https://, http://, or www. prefix. Just the domain name like contactgram.com)
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your-domain.com; # Replace with your domain or IP address
+
+    ssl_certificate /etc/ssl/certs/cloudflare_origin.pem;
+    ssl_certificate_key /etc/ssl/private/cloudflare_origin.key;
+
+    # Cloudflare's CA for Authenticated Origin Pulls (optional but recommended)
+    ssl_client_certificate /etc/ssl/certs/cloudflare_ca.pem;
+    ssl_verify_client on;
+
+    # Security headers
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RS>
 
     location / {
         proxy_pass http://localhost:2222;  # Forward requests to port 2222 or if you change port in settings.env change the port here too
