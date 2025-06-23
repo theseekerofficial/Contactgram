@@ -2,6 +2,7 @@
 
 server {
     listen 80;
+    listen [::]:80;
     server_name your-domain.com;  # Replace with your domain or IP address (No https://, http://, or www. prefix. Just the domain name like contactgram.com)
     return 301 https://$host$request_uri;
 }
