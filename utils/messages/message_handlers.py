@@ -1,14 +1,16 @@
 import re
+import random
 import asyncio
 from loguru import logger
 from telegram.ext import CallbackContext
 from utils.processor.load_env import env_dict
 from utils.processor.context_processors import broadcast_admin_message
 from utils.processor.tools import get_file_id_and_text, store_chat_message
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MessageOriginHiddenUser, MessageOriginChannel, MessageOriginChat
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MessageOriginHiddenUser, MessageOriginChannel, MessageOriginChat, ReactionTypeEmoji
 
 admin_chat_ids = env_dict.get("ADMIN_TEAM")
 
+USER_TO_ADMIN_REACTIONS = ["📤", "👍", "✍️", "🫡", "⚡"]
 
 async def forward_to_admin(update: Update, context: CallbackContext):
     try:
@@ -128,6 +130,16 @@ async def forward_to_admin(update: Update, context: CallbackContext):
                 metadata = f"#{username}\n\n<i>User ID: </i><code>{user_id}</code>\n<i>Username: </i>@{username}\n<i>User Link: </i>{user_mention}\n<i>MSG ID: {update.message.message_id}</i>"
                 await context.bot.send_message(chat_id=admin_chat_id.strip(), text=metadata, parse_mode="html", reply_to_message_id=forwarded_message.message_id)
 
+        try:
+            random_emoji = random.choice(USER_TO_ADMIN_REACTIONS)
+            await context.bot.set_message_reaction(
+                chat_id=update.message.chat_id,
+                message_id=update.message.message_id,
+                reaction=[ReactionTypeEmoji(emoji=random_emoji)]
+            )
+        except Exception as e:
+            logger.error(f"Error adding reaction to admin message: {str(e)}")
+
         if env_dict.get("START_WEB_APP"):
             asyncio.create_task(store_chat_message(context, update.message.from_user.id,
                                                    update.message.message_id,
@@ -181,7 +193,6 @@ async def handle_admin_reply(update: Update, context: CallbackContext):
                 msg_id = None
 
             await broadcast_admin_message(update, context, f"{message_text}", file_id, user_id, msg_id)
-
     except Exception as e:
         logger.error(f"Error handling admin reply: {str(e)}")
 
@@ -197,7 +208,7 @@ async def handle_admin_forwards(update: Update, context: CallbackContext):
 
         await context.bot.forward_message(chat_id=user_id, from_chat_id=update.message.chat_id, message_id=message_id)
         await update.message.delete()
-        await broadcast_admin_message(update, context, message_text, file_id, update.message.from_user.id, None)
+        await broadcast_admin_message(update, context, message_text, file_id, update.message.from_user.id, None, True)
 
         if str(user_id) not in admin_chat_ids and env_dict.get("START_WEB_APP"):
             asyncio.create_task(store_chat_message(context, user_id,

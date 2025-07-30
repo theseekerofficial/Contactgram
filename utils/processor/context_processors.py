@@ -1,6 +1,8 @@
+import random
 import asyncio
 from loguru import logger
 from telegram.ext import ContextTypes
+from telegram import ReactionTypeEmoji
 from utils.processor.load_env import env_dict
 from utils.processor.tools import store_chat_message
 from utils.database.db_initialize import chat_storage
@@ -8,8 +10,9 @@ from utils.processor.data_holders import admin_data, user_contact_data
 
 admin_chat_ids = env_dict.get("ADMIN_TEAM")
 
+ADMIN_TO_USER_REACTIONS = ["🏆", "👌", "💯", "🎉", "🚀"]
 
-async def broadcast_admin_message(update, context, message, file_id, user_id, reply_to_message_id):
+async def broadcast_admin_message(update, context, message, file_id, user_id, reply_to_message_id, is_forwarded=False):
     is_media = False
     if update.message.text:
         await context.bot.send_message(chat_id=user_id, text=message, parse_mode="html", reply_to_message_id=reply_to_message_id)
@@ -28,6 +31,17 @@ async def broadcast_admin_message(update, context, message, file_id, user_id, re
     elif update.message.sticker:
         await context.bot.forward_message(chat_id=user_id, from_chat_id=update.message.chat_id, message_id=update.message.message_id)
         is_media = True
+
+    if not is_forwarded:
+        try:
+            random_emoji = random.choice(ADMIN_TO_USER_REACTIONS)
+            await context.bot.set_message_reaction(
+                chat_id=update.message.chat_id,
+                message_id=update.message.message_id,
+                reaction=[ReactionTypeEmoji(emoji=random_emoji)]
+            )
+        except Exception as e:
+            logger.error(f"Error adding reaction to admin message: {str(e)}")
 
     if str(user_id) not in admin_chat_ids and env_dict.get("START_WEB_APP"):
         asyncio.create_task(store_chat_message(context, user_id,

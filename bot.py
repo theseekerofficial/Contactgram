@@ -82,12 +82,15 @@ def main():
     return application
 
 if __name__ == "__main__":
-    configure_logger()
-    check_env()
+    try:
+        configure_logger()
+        check_env()
 
-    app = main()
-    if env_dict.get("ENABLE_DETAILED_FORWARD").capitalize() != "True":
-        logger.warning("Detailed Forward Mode is disabled. This mode as less capabilities compared to the detailed mode. "
-                       "For more admin and user experience it's highly recommended to use detailed mode.")
-    logger.info(f"PRODUCT OF TSSC | Creator: ꓄ꃅꍟ ꌗꍟꍟꀘꍟꋪ [https://t.me/MrUnknown411]")
-    app.run_polling()
+        app = main()
+        if env_dict.get("ENABLE_DETAILED_FORWARD").capitalize() != "True":
+            logger.warning("Detailed Forward Mode is disabled. This mode as less capabilities compared to the detailed mode. "
+                           "For more admin and user experience it's highly recommended to use detailed mode.")
+        logger.info(f"PRODUCT OF TSSC | Creator: ꓄ꃅꍟ ꌗꍟꍟꀘꍟꋪ [https://t.me/MrUnknown411]")
+        app.run_polling()
+    except KeyboardInterrupt:
+        logger.info("User stopped the bot. Bot shutting down...")
