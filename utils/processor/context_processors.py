@@ -10,7 +10,7 @@ from utils.processor.data_holders import admin_data, user_contact_data
 
 admin_chat_ids = env_dict.get("ADMIN_TEAM")
 
-ADMIN_TO_USER_REACTIONS = ["🏆", "👌", "💯", "🎉", "🚀"]
+ADMIN_TO_USER_REACTIONS = ["🏆", "👌", "💯", "🎉", "👻"]
 
 async def broadcast_admin_message(update, context, message, file_id, user_id, reply_to_message_id, is_forwarded=False):
     is_media = False
